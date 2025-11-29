@@ -1,0 +1,15 @@
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Target build directory
+target/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
