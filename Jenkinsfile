@@ -1,79 +1,61 @@
 pipeline {
     agent any
 
+    tools {
+        maven 'Maven-3.9.11'
+        jdk 'jdk21'
+        git 'system-git'
+    }
+
     stages {
-        // Stage 1: Checkout - Manual Git clone to avoid Jenkins Git issues
+        // Stage 1: Checkout Code from GitHub
         stage('Checkout') {
             steps {
-                sh '''
-                    echo "=== CHECKOUT STAGE ==="
-                    echo "Downloading code from GitHub..."
-                    rm -rf project-source
-                    git clone https://github.com/Meskini-Iheb/tp_dev_ops.git project-source
-                    cd project-source
-                    pwd
-                    ls -la
-                    echo "Checkout completed successfully!"
-                '''
+                git branch: 'master', 
+                url: 'https://github.com/Meskini-Iheb/tp_dev_ops.git'
             }
         }
 
-        // Stage 2: Build - Compile and package the application
+        // Stage 2: Build with Maven
         stage('Build') {
             steps {
-                sh '''
-                    echo "=== BUILD STAGE ==="
-                    cd project-source
-                    mvn clean compile
-                    echo "Build completed successfully!"
-                '''
+                sh 'mvn clean compile'
             }
         }
 
-        // Stage 3: Tests - Run unit tests
+        // Stage 3: Run Unit Tests
         stage('Tests') {
             steps {
-                sh '''
-                    echo "=== TESTS STAGE ==="
-                    cd project-source
-                    mvn test
-                    echo "Tests completed successfully!"
-                '''
+                sh 'mvn test'
             }
             post {
                 always {
-                    junit 'project-source/target/surefire-reports/*.xml'
+                    junit 'target/surefire-reports/*.xml'
                 }
             }
         }
 
-        // Stage 4: SAST - Security scanning (simplified for now)
-        stage('SAST') {
+        // Stage 4: Package the application
+        stage('Package') {
             steps {
-                sh '''
-                    echo "=== SAST STAGE ==="
-                    cd project-source
-                    echo "SAST Security Scan - This would run SonarQube in a real setup"
-                    echo "For now, we'll run basic security checks..."
-                    # Basic security checks
-                    mvn compile
-                    echo "SAST checks completed!"
-                '''
+                sh 'mvn clean package'
             }
         }
 
-        // Stage 5: Deploy - Deploy to Tomcat
+        // Stage 5: Deploy to Tomcat
         stage('Deploy') {
             steps {
                 sh '''
-                    echo "=== DEPLOY STAGE ==="
-                    cd project-source
-                    mvn clean package
-                    echo "Deploying WAR file to Tomcat..."
+                    echo "Stopping Tomcat..."
+                    sudo systemctl stop tomcat
+                    
+                    echo "Deploying WAR file..."
                     sudo cp target/tp_dev_ops_dsi31.war /opt/tomcat/latest/webapps/
-                    echo "Deployment completed successfully!"
-                    echo "APPLICATION DEPLOYED!"
-                    echo "Access your application at: http://localhost:8080/tp_dev_ops_dsi31/"
+                    
+                    echo "Starting Tomcat..."
+                    sudo systemctl start tomcat
+                    
+                    echo "Deployment completed!"
                 '''
             }
         }
@@ -81,18 +63,13 @@ pipeline {
 
     post {
         always {
-            echo "=== PIPELINE EXECUTION COMPLETED ==="
-            echo "Cleaning up workspace..."
-            sh 'rm -rf project-source'
+            echo 'Pipeline completed - checking results...'
         }
         success {
-            echo "PIPELINE SUCCEEDED!"
-            echo "All stages completed successfully!"
-            echo "Application is live at: http://localhost:8080/tp_dev_ops_dsi31/"
+            echo 'Pipeline succeeded! Application deployed successfully.'
         }
         failure {
-            echo "PIPELINE FAILED"
-            echo "Check the stage where it failed above"
+            echo 'Pipeline failed! Check the logs for details.'
         }
     }
 }
