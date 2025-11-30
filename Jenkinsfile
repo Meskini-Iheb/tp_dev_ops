@@ -22,10 +22,10 @@ pipeline {
             }
         }
 
-        // Stage 3: Run Unit Tests (with condition for no tests)
+        // Stage 3: Run Unit Tests
         stage('Tests') {
             steps {
-                sh 'mvn test || echo "No tests found - continuing"'
+                sh 'mvn test'
             }
             post {
                 always {
@@ -40,7 +40,6 @@ pipeline {
                 sh '''
                     echo "=== SAST SECURITY SCAN ==="
                     echo "Running security checks..."
-                    # This is where SonarQube would run
                     mvn compile
                     echo "SAST completed successfully!"
                 '''
@@ -54,7 +53,22 @@ pipeline {
                     echo "=== PACKAGING AND DEPLOYMENT ==="
                     mvn clean package
                     echo "Deploying WAR file to Tomcat..."
+                    
+                    # Stop Tomcat before deployment
+                    sudo systemctl stop tomcat || true
+                    
+                    # Remove old deployment
+                    sudo rm -rf /opt/tomcat/latest/webapps/tp_dev_ops*
+                    
+                    # Copy new WAR file (ensure Jenkins has permissions)
                     sudo cp target/tp_dev_ops.war /opt/tomcat/latest/webapps/
+                    
+                    # Start Tomcat
+                    sudo systemctl start tomcat
+                    
+                    echo "Waiting for deployment to complete..."
+                    sleep 30
+                    
                     echo "Deployment completed successfully!"
                     echo "Application available at: http://localhost:8080/tp_dev_ops/"
                 '''
