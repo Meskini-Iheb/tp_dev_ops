@@ -48,32 +48,29 @@ pipeline {
 
         // Stage 5: Package and Deploy
         stage('Deploy') {
-            steps {
-                sh '''
-                    echo "=== PACKAGING AND DEPLOYMENT ==="
-                    mvn clean package
-                    echo "Deploying WAR file to Tomcat..."
-                    
-                    # Stop Tomcat before deployment
-                    sudo systemctl stop tomcat || true
-                    
-                    # Remove old deployment
-                    sudo rm -rf /opt/tomcat/latest/webapps/tp_dev_ops*
-                    
-                    # Copy new WAR file (ensure Jenkins has permissions)
-                    sudo cp target/tp_dev_ops.war /opt/tomcat/latest/webapps/
-                    
-                    # Start Tomcat
-                    sudo systemctl start tomcat
-                    
-                    echo "Waiting for deployment to complete..."
-                    sleep 30
-                    
-                    echo "Deployment completed successfully!"
-                    echo "Application available at: http://localhost:8080/tp_dev_ops/"
-                '''
-            }
-        }
+    steps {
+        sh '''
+            echo "=== PACKAGING AND DEPLOYMENT ==="
+            mvn clean package
+            echo "Deploying WAR file to Tomcat..."
+            
+            # Stop Tomcat (now allowed via sudoers)
+            sudo systemctl stop tomcat
+            
+            # Remove old deployment
+            sudo rm -rf /opt/tomcat/latest/webapps/tp_dev_ops /opt/tomcat/latest/webapps/tp_dev_ops.war
+            
+            # Deploy new WAR file
+            sudo cp target/tp_dev_ops.war /opt/tomcat/latest/webapps/
+            
+            # Start Tomcat
+            sudo systemctl start tomcat
+            
+            echo "Deployment completed successfully!"
+            echo "Application available at: http://localhost:8080/tp_dev_ops/"
+        '''
+    }
+}
     }
 
     post {
